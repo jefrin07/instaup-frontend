@@ -1,9 +1,10 @@
 import React from "react";
 import { Heart, MessageCircle, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const PostCard = ({ post }) => {
   const { user, content, image_urls, post_type, likes_count, createdAt } = post;
-
+  const navigate = useNavigate();
   const formattedDate = new Date(createdAt).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -13,7 +14,10 @@ const PostCard = ({ post }) => {
     return text.split(/(\#[a-zA-Z0-9_]+)/g).map((part, index) => {
       if (part.startsWith("#")) {
         return (
-          <span key={index} className="text-blue-500 cursor-pointer hover:underline">
+          <span
+            key={index}
+            className="text-blue-500 cursor-pointer hover:underline"
+          >
             {part}
           </span>
         );
@@ -25,7 +29,10 @@ const PostCard = ({ post }) => {
   return (
     <div className="bg-white shadow rounded-2xl mb-6 overflow-hidden border border-gray-200">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
+      <div
+        className="flex items-center gap-3 p-4"
+        onClick={() => navigate(`/profile/${user._id}`)}
+      >
         <img
           src={user?.avatar || "https://via.placeholder.com/40"}
           alt={user?.name}
@@ -39,7 +46,9 @@ const PostCard = ({ post }) => {
 
       {/* Content */}
       {content && (
-        <div className="px-4 pb-3 text-gray-800 text-sm">{formatContent(content)}</div>
+        <div className="px-4 pb-3 text-gray-800 text-sm">
+          {formatContent(content)}
+        </div>
       )}
 
       {/* Image */}
@@ -66,7 +75,9 @@ const PostCard = ({ post }) => {
             <Send size={22} />
           </button>
         </div>
-        <span className="text-sm text-gray-600">{likes_count.length} likes</span>
+        <span className="text-sm text-gray-600">
+          {likes_count.length} likes
+        </span>
       </div>
     </div>
   );
