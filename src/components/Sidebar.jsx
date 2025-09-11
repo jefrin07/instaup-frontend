@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User, CirclePlus, LogOut as LogOutIcon } from "lucide-react";
 import { assets } from "../assets/assets";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,27 +11,25 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const { userData, logoutUser } = useAppContext();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Prevent scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = showLogoutModal ? "hidden" : "auto";
+  }, [showLogoutModal]);
+
   return (
     <>
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-black/80  sm:hidden z-20"
-        />
-      )}
-
       {/* Sidebar */}
       <div
         className={`fixed sm:static top-0 left-0 h-screen w-60 xl:w-72 bg-white border-r border-gray-200 flex flex-col justify-between items-center transform transition-transform duration-300 ease-in-out z-30
-        ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
-        }`}
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}`}
       >
-        {/* Scrollable content */}
         <div className="w-full flex-1 flex flex-col overflow-y-auto no-scrollbar">
           {/* Logo */}
           <img
-            onClick={() => navigate("/feed")}
+            onClick={() => {
+              navigate("/feed");
+              setSidebarOpen(false);
+            }}
             src={assets.logo}
             className="w-20 ml-7 my-4 cursor-pointer"
             alt="Logo"
@@ -41,9 +39,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           {/* Menu Items */}
           <MenuItems setSidebarOpen={setSidebarOpen} />
 
-          {/* Create Post Button */}
+          {/* Create Post */}
           <Link
             to="/create-post"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center justify-center gap-2 py-2.5 mt-6 mx-6 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-700 hover:to-purple-800 active:scale-95 transition text-white cursor-pointer"
           >
             <CirclePlus className="w-5 h-5" />
@@ -66,9 +65,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               )}
             </div>
             <div>
-              <h1 className="text-sm font-medium">
-                {userData?.name || "Guest"}
-              </h1>
+              <h1 className="text-sm font-medium">{userData?.name || "Guest"}</h1>
             </div>
           </div>
           <LogOutIcon

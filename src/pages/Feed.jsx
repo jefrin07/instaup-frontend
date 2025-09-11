@@ -10,24 +10,34 @@ const Feed = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
-      setFeeds(dummyPostsData);
-      setLoading(false);
-    }, 1500);
+    const fetchPosts = async () => {
+      setLoading(true);
+      setTimeout(() => {
+        setFeeds(dummyPostsData);
+        setLoading(false);
+      }, 1500); // Replace with real API call
+    };
+    fetchPosts();
   }, []);
 
   return (
-    <div className="flex h-screen w-full gap-4 px-4">
+    <div className="flex h-screen w-full gap-4 px-4 overflow-hidden">
       {/* Center feed */}
-      <div className="flex-1 max-w-xl mx-auto overflow-y-auto h-full no-scrollbar py-10">
-        <StoriesBar />
-        {loading
-          ? Array.from({ length: 3 }).map((_, i) => <PostCardSkeleton key={i} />)
-          : feeds.map((post) => <PostCard key={post._id} post={post} />)}
+      <div className="flex-1 flex flex-col overflow-hidden h-full  mx-auto">
+        {/* Posts scrollable */}
+        <div className="flex-1 overflow-y-auto no-scrollbar  py-4">
+          <StoriesBar />
+
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <PostCardSkeleton key={i} />
+              ))
+            : feeds.map((post) => <PostCard key={post._id} post={post} />)}
+        </div>
       </div>
 
       {/* Right Sidebar */}
-      <div className="hidden lg:flex w-80 flex-shrink-0">
+      <div className="hidden lg:flex w-80 flex-shrink-0 sticky top-0 h-screen">
         <RightSidebar />
       </div>
     </div>

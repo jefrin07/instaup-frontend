@@ -45,7 +45,7 @@ const StoriesBar = () => {
     <>
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto no-scrollbar p-3 bg-white rounded-2xl border border-gray-200 mb-6 max-w-xl cursor-grab active:cursor-grabbing select-none"
+        className="flex gap-4 overflow-x-auto no-scrollbar p-3 bg-white rounded-2xl border border-gray-200 mb-6 cursor-grab active:cursor-grabbing select-none"
         onMouseDown={(e) => startDrag(e.clientX)}
         onMouseMove={(e) => handleDrag(e.clientX)}
         onMouseLeave={stopDrag}

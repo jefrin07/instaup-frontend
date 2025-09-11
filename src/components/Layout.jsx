@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import Loading from "./Loading";
 import { useAppContext } from "../context/AppContext";
@@ -9,20 +9,35 @@ const Layout = () => {
   const { userData } = useAppContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  return userData ? (
-    <div className="w-full h-screen flex relative">
+  // Prevent background scroll when sidebar is open on mobile
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "auto";
+  }, [sidebarOpen]);
+
+  if (!userData) return <Loading />;
+
+  return (
+    <div className="w-full h-screen flex relative bg-slate-50">
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/70 sm:hidden z-20 transition-opacity duration-300"
+        />
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 bg-slate-50 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto h-screen no-scrollbar">
         <Outlet />
       </main>
 
-      {/* Mobile Toggle Button (Top Right) */}
+      {/* Sidebar toggle button for mobile */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="sm:hidden fixed top-3 right-3 z-40 bg-white rounded-md shadow p-2"
+        className="sm:hidden fixed top-4 right-4 z-30 bg-white rounded-md shadow p-2 transition hover:bg-gray-100"
       >
         {sidebarOpen ? (
           <X className="w-6 h-6 text-gray-700" />
@@ -31,8 +46,6 @@ const Layout = () => {
         )}
       </button>
     </div>
-  ) : (
-    <Loading />
   );
 };
 
