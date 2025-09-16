@@ -21,7 +21,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Sidebar */}
       <div
         className={`fixed sm:static top-0 left-0 h-screen w-60 xl:w-72 bg-white border-r border-gray-200 flex flex-col justify-between items-center transform transition-transform duration-300 ease-in-out z-30
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}`}
+        ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
+        }`}
       >
         <div className="w-full flex-1 flex flex-col overflow-y-auto no-scrollbar">
           {/* Logo */}
@@ -54,9 +56,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="w-full border-t border-gray-200 p-4 px-7 flex items-center justify-between">
           <div className="flex gap-2 items-center cursor-pointer">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              {userData?.avatar ? (
+              {userData?.profile_picture || userData?.avatar ? (
                 <img
-                  src={userData.avatar}
+                  src={userData.profile_picture || userData.avatar}
                   alt={userData.name || "User Avatar"}
                   className="w-full h-full object-cover"
                 />
@@ -65,7 +67,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               )}
             </div>
             <div>
-              <h1 className="text-sm font-medium">{userData?.name || "Guest"}</h1>
+              <h1 className="text-sm font-medium">
+                {userData?.name || "Guest"}
+              </h1>
             </div>
           </div>
           <LogOutIcon

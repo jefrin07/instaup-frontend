@@ -15,6 +15,7 @@ import { ToastContainer } from "react-toastify";
 import PrivateRoute from "./components/PrivateRoute";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import OtherUserProfile from "./pages/OtherUserProfile";
 
 const App = () => {
   return (
@@ -34,8 +35,8 @@ const App = () => {
             <Route path="/connections" element={<Connections />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/:profileId" element={<Profile />} />
             <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/view-profile/:id" element={<OtherUserProfile />} />
           </Route>
         </Route>
 

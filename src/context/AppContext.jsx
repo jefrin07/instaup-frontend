@@ -18,27 +18,28 @@ export const AppProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const data = await getCurrentUser();
-        setUserData(data.user);
-        setIsLoggedIn(true);
-        localStorage.setItem("userData", JSON.stringify(data.user));
-      } catch (err) {
-        setUserData(null);
-        setIsLoggedIn(false);
-        localStorage.removeItem("userData");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ✅ define fetchUser here
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const data = await getCurrentUser();
+      setUserData(data.user);
+      setIsLoggedIn(true);
+      localStorage.setItem("userData", JSON.stringify(data.user));
+    } catch (err) {
+      setUserData(null);
+      setIsLoggedIn(false);
+      localStorage.removeItem("userData");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Run once on mount
+  useEffect(() => {
     fetchUser();
   }, []);
 
-  // Optional: utility to log out
   const logoutUser = async () => {
     await logout();
     setUserData(null);
@@ -61,5 +62,4 @@ export const AppProvider = ({ children }) => {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-// Custom hook
 export const useAppContext = () => useContext(AppContext);
