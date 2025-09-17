@@ -1,5 +1,5 @@
 import React from "react";
-import { CirclePlus } from "lucide-react";
+import { CirclePlus, User } from "lucide-react";
 
 const StoryItem = ({ story, isOwnStory, onClick }) => {
   return (
@@ -10,11 +10,15 @@ const StoryItem = ({ story, isOwnStory, onClick }) => {
       {isOwnStory ? (
         <div className="relative">
           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center">
-            <img
-              src={story.avatar}
-              alt="you"
-              className="w-full h-full object-cover"
-            />
+            {story?.avatar ? (
+              <img
+                src={story.avatar}
+                alt="avatar"
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <User className="w-10 h-10 text-gray-400" />
+            )}
           </div>
           <div className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-[2px]">
             <CirclePlus size={16} className="text-white" />

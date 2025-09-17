@@ -1,139 +1,221 @@
-import React, { useState } from "react";
-import { Image, X } from "lucide-react";
-import ImageCropModal from "../components/ImageCropModal";
+import React, { useEffect, useState, useCallback } from "react";
+import { Image, User, X } from "lucide-react";
+import { getCurrentUser } from "../services/authService";
+import { addPost } from "../services/postService";
+import { toast } from "react-toastify";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "../lib/getCroppedImg";
 
-const CreatePost = () => {
-  const [postContent, setPostContent] = useState("");
-  const [images, setImages] = useState([]);
-  const [cropModal, setCropModal] = useState(null);
+// --- Subcomponents ---
 
-  const user = {
-    full_name: "John Warren",
-    username: "john_warren",
-    profile_picture: "https://i.pravatar.cc/100?img=5",
-  };
-
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const previews = files.map((file) => ({
-      id: URL.createObjectURL(file),
-      file,
-      cropped: null,
-    }));
-    setImages((prev) => [...prev, ...previews]);
-  };
-
-  const removeImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
-  };
-
-  const handleSaveCrop = (id, croppedImage) => {
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, cropped: croppedImage } : img
-      )
+const UserInfo = ({ user, loading }) => {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 w-full animate-pulse">
+        <div className="w-14 h-14 rounded-full bg-slate-200" />
+        <div className="flex flex-col gap-1">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-3 w-24 bg-slate-200 rounded" />
+        </div>
+      </div>
     );
-  };
+  }
 
-  const handlePublish = () => {
-    if (!postContent.trim() && images.length === 0) return;
-    console.log("New Post:", { postContent, images });
-    setPostContent("");
-    setImages([]);
-  };
+  if (!user) return <p className="text-red-500">Failed to load user</p>;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex justify-center py-10 px-4">
-      <div className="w-full">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Create Post
-          </h1>
-          <p className="text-slate-600">Share your thoughts with the world</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <img
-              src={user.profile_picture}
-              alt={user.full_name}
-              className="w-12 h-12 rounded-full"
-            />
-            <div>
-              <p className="font-semibold text-slate-800">{user.full_name}</p>
-              <p className="text-sm text-slate-500">@{user.username}</p>
-            </div>
-          </div>
-
-          <textarea
-            placeholder="What's happening?"
-            value={postContent}
-            onChange={(e) => setPostContent(e.target.value)}
-            rows={3}
-            className="w-full resize-none p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-4"
-          />
-
-        {images.length > 0 && (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-    {images.map((img) => (
-      <div key={img.id} className="relative w-full pb-[100%]">
+    <div className="flex items-center gap-3">
+      {user.profile_picture ? (
         <img
-          src={img.cropped || img.id}
-          alt="preview"
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+          src={user.profile_picture}
+          alt="avatar"
+          className="w-14 h-14 rounded-full border-2 border-white shadow-md object-cover"
         />
-        {/* Remove button */}
+      ) : (
+        <div className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white shadow-md bg-slate-200">
+          <User className="w-7 h-7 text-slate-500" />
+        </div>
+      )}
+      <div>
+        <p className="font-semibold text-slate-800">{user.name || "Name"}</p>
+        <p className="text-sm text-slate-500">@{user.username || "username"}</p>
+      </div>
+    </div>
+  );
+};
+
+const ImagePreview = ({ images, onRemove }) => (
+  <div className="flex gap-2 flex-wrap mb-4">
+    {images.map((img, idx) => (
+      <div key={idx} className="relative w-24 h-24">
+        <img
+          src={URL.createObjectURL(img)}
+          alt="preview"
+          className="w-full h-full object-cover rounded"
+        />
         <button
-          onClick={() => removeImage(img.id)}
-          className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded-full"
+          onClick={() => onRemove(idx)}
+          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
         >
-          <X className="w-4 h-4" />
-        </button>
-        {/* Crop button */}
-        <button
-          onClick={() => setCropModal(img)}
-          className="absolute bottom-2 right-2 bg-indigo-600 text-white px-2 py-1 rounded-md text-xs"
-        >
-          Crop
+          <X className="w-3 h-3" />
         </button>
       </div>
     ))}
   </div>
-)}
+);
 
+const CropModal = ({ image, crop, zoom, onCropChange, onZoomChange, onCropComplete, onCancel, onConfirm }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg relative w-96 h-96">
+      <Cropper
+        image={image}
+        crop={crop}
+        zoom={zoom}
+        aspect={1}
+        onCropChange={onCropChange}
+        onZoomChange={onZoomChange}
+        onCropComplete={onCropComplete}
+      />
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+        <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={onCancel}>
+          Cancel
+        </button>
+        <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={onConfirm}>
+          Crop
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
-          <div className="flex items-center justify-between">
-            <label className="cursor-pointer text-slate-500 hover:text-slate-700">
-              <Image className="w-5 h-5" />
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-            </label>
+// --- Main Component ---
 
-            <button
-              onClick={handlePublish}
-              disabled={!postContent.trim() && images.length === 0}
-              className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:opacity-90 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Publish Post
-            </button>
-          </div>
+const CreatePost = () => {
+  const [postContent, setPostContent] = useState("");
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [images, setImages] = useState([]);
+  const [croppingImage, setCroppingImage] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [submitting, setSubmitting] = useState(false); // <-- new state
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getCurrentUser();
+        setUserData(res.user);
+      } catch (err) {
+        toast.error("Failed to fetch user data");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const onCropComplete = useCallback((_, areaPixels) => setCroppedAreaPixels(areaPixels), []);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => setCroppingImage(reader.result);
+      reader.readAsDataURL(file);
+      e.target.value = null;
+    }
+  };
+
+  const handleCropConfirm = async () => {
+    try {
+      const croppedBlob = await getCroppedImg(croppingImage, croppedAreaPixels);
+      setImages((prev) => [...prev, croppedBlob]);
+      setCroppingImage(null);
+    } catch (err) {
+      toast.error("Failed to crop image");
+    }
+  };
+
+  const handleRemoveImage = (index) => setImages((prev) => prev.filter((_, i) => i !== index));
+
+  const handleSubmit = async () => {
+    if (!postContent && images.length === 0) return toast.error("Post cannot be empty");
+
+    setSubmitting(true); // <-- disable button
+    const formData = new FormData();
+    formData.append("content", postContent);
+    formData.append("post_type", "text");
+    images.forEach((img) => formData.append("images", img));
+
+    try {
+      const res = await addPost(formData);
+      toast.success(res.message);
+      setPostContent("");
+      setImages([]);
+    } catch (err) {
+      toast.error(err.message || "Failed to create post");
+    } finally {
+      setSubmitting(false); // <-- enable button
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex justify-center py-10 px-4">
+      <div className="w-full max-w-3xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Post</h1>
+          <p className="text-slate-600">Share your thoughts with the world</p>
+        </div>
+
+        {/* Post Box */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <UserInfo user={userData} loading={loading} />
+          <textarea
+            className="w-full p-4 border border-slate-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="What's on your mind?"
+            value={postContent}
+            onChange={(e) => setPostContent(e.target.value)}
+            disabled={submitting} // disable typing while submitting
+          />
+
+          <ImagePreview images={images} onRemove={handleRemoveImage} />
+
+          <label className="flex items-center gap-2 cursor-pointer text-indigo-600 mb-4">
+            <Image /> Add Image
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={submitting} />
+          </label>
+
+          {croppingImage && (
+            <CropModal
+              image={croppingImage}
+              crop={crop}
+              zoom={zoom}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+              onCancel={() => setCroppingImage(null)}
+              onConfirm={handleCropConfirm}
+            />
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting} // <-- disable button while submitting
+            className={`mt-4 w-full px-4 py-2 rounded-lg transition ${
+              submitting
+                ? "bg-indigo-300 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            }`}
+          >
+            {submitting ? "Posting..." : "Post"}
+          </button>
         </div>
       </div>
-
-      {cropModal && (
-        <ImageCropModal
-          image={cropModal}
-          onClose={() => setCropModal(null)}
-          onSave={handleSaveCrop}
-        />
-      )}
     </div>
   );
 };
 
 export default CreatePost;
+
+

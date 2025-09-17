@@ -59,7 +59,7 @@ const StoriesBar = () => {
       >
         {/* User Story */}
         <StoryItem
-          story={{ avatar: userData.avatar, user: { name: "You" } }}
+          story={{ avatar: userData.profile_picture, user: { name: "You" } }}
           isOwnStory
           onClick={() => setIsAddStoryOpen(true)}
         />

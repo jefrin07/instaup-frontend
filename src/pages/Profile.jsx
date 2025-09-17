@@ -6,9 +6,11 @@ import AvatarImage from "../components/Profile/AvatarImage";
 import ProfileInfo from "../components/Profile/ProfileInfo";
 import Tabs from "../components/Profile/Tabs";
 import EditProfileModal from "../components/Profile/EditProfileModal";
+import UserPosts from "../components/Profile/UserPosts";
 
-import { updateProfile } from "../services/userProfile"; // ⬅️ call API directly
+import { updateProfile } from "../services/userProfile";
 import { getCurrentUser } from "../services/authService";
+import { getUserPosts } from "../services/postService";
 
 const Profile = () => {
   const [userData, setUserData] = useState(null);
@@ -23,17 +25,20 @@ const Profile = () => {
   const [previewProfile, setPreviewProfile] = useState("");
   const [previewCover, setPreviewCover] = useState("");
 
-  // ✅ fetch user from API on mount
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
+  // Fetch user
   useEffect(() => {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const res = await getCurrentUser(); // API call
+        const res = await getCurrentUser();
         setUserData(res.user);
         setFormData(res.user);
-        setPreviewProfile(res.user?.profile_picture || res.user?.avatar || "");
+        setPreviewProfile(res.user?.profile_picture || "");
         setPreviewCover(res.user?.cover_picture || "");
-        localStorage.setItem("userData", JSON.stringify(res.user)); // optional
+        localStorage.setItem("userData", JSON.stringify(res.user));
       } catch (err) {
         console.error("Failed to load profile:", err);
         toast.error("Failed to load profile");
@@ -44,32 +49,45 @@ const Profile = () => {
     fetchUser();
   }, []);
 
+  // Fetch posts when "Posts" tab is active
+  useEffect(() => {
+    if (activeTab === "Posts" && userData) {
+      const fetchPosts = async () => {
+        try {
+          setPostsLoading(true);
+          const res = await getUserPosts(userData._id);
+          setPosts(res.posts);
+        } catch (err) {
+          console.error("Failed to load posts:", err);
+          toast.error("Failed to load posts");
+        } finally {
+          setPostsLoading(false);
+        }
+      };
+      fetchPosts();
+    }
+  }, [activeTab, userData]);
+
   const handleSave = async () => {
     try {
       setSaving(true);
-      setErrors({}); // clear old errors
+      setErrors({});
       const updated = await updateProfile(formData);
-
       setUserData(updated.user);
       setFormData(updated.user);
-      setPreviewProfile(
-        updated.user?.profile_picture || updated.user?.avatar || ""
-      );
+      setPreviewProfile(updated.user?.profile_picture || "");
       setPreviewCover(updated.user?.cover_picture || "");
       localStorage.setItem("userData", JSON.stringify(updated.user));
-
       setIsEditing(false);
       toast.success("Profile updated!");
     } catch (err) {
       console.error("Profile update failed:", err);
-
-      // ✅ check for validation error array from backend
       if (Array.isArray(err.response?.data?.errors)) {
         const fieldErrors = {};
         err.response.data.errors.forEach((e) => {
-          fieldErrors[e.path] = e.msg; // map field -> message
+          fieldErrors[e.path] = e.msg;
         });
-        setErrors(fieldErrors); // put into state
+        setErrors(fieldErrors);
       } else {
         toast.error(err.response?.data?.message || "Update failed");
       }
@@ -95,11 +113,12 @@ const Profile = () => {
   }
 
   return (
-    <div className="minh-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50">
       <CoverImage
         previewCover={previewCover}
         setPreviewCover={setPreviewCover}
       />
+
       <div className="max-w-3xl mx-auto -mt-16 p-6">
         <div className="bg-white rounded-2xl shadow p-6 relative">
           <AvatarImage
@@ -115,7 +134,21 @@ const Profile = () => {
             }}
           />
         </div>
+
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === "Posts" && (
+            <UserPosts posts={posts} loading={postsLoading} />
+          )}
+
+          {activeTab === "Stories" && (
+            <div className="p-6 bg-white rounded-xl shadow text-center text-slate-500">
+              Stories will appear here
+            </div>
+          )}
+        </div>
       </div>
 
       {isEditing && (
