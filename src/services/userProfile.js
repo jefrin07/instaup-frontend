@@ -55,7 +55,14 @@ export const toggleAccountType = async () => {
   return data;
 };
 
-export const getUserById = async (id) => {
-  const res = await API.get(`/api/profile/getUserProfile/${id}`);
-  return res.data; // should contain { user: {...} }
+export const getUserInfo = async (id) => {
+  const res = await API.get(`/api/profile/getUserInfo/${id}`);
+  return res.data.user;
+};
+
+export const getUserPosts = async (id, page = 1, limit = 15) => {
+  const res = await API.get(`/api/profile/getUserPosts/${id}`, {
+    params: { page, limit },
+  });
+  return res.data; // { posts: [...], totalPosts: number }
 };

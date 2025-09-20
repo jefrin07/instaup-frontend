@@ -1,167 +1,348 @@
-import React, { useEffect, useState, useRef } from "react";
-import { X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Heart, User, Eye } from "lucide-react";
+import timeAgo from "../lib/timeago";
+import {
+  toggleLikeStory,
+  viewStory,
+  deleteStory,
+} from "../services/storyService";
+import { toast } from "react-toastify";
 
-const STORY_DEFAULT_DURATION = 5000; // 5s for image/text
-
-const StoryViewerModal = ({ stories, startIndex = 0, onClose }) => {
+const StoryViewerModal = ({
+  stories,
+  startIndex,
+  onClose,
+  currentUserId,
+  onUpdateStoryLikes,
+  onDeleteStory,
+}) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
+  const [progress, setProgress] = useState(0);
+  const [fontSize, setFontSize] = useState(32);
+  const [likesCount, setLikesCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [animateLike, setAnimateLike] = useState(false);
+  const [viewers, setViewers] = useState([]);
+  const [showViewerList, setShowViewerList] = useState(false);
+  const textRef = useRef(null);
+  const intervalRef = useRef(null);
 
   const currentStory = stories[currentIndex];
+  const isOwner = currentStory.user?._id === currentUserId;
 
-  // Disable text selection
+  // Update likes, liked state, and viewers whenever the story changes
   useEffect(() => {
-    document.body.style.userSelect = "none";
-    return () => (document.body.style.userSelect = "auto");
-  }, []);
+    if (!currentStory) return;
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "ArrowLeft") prevStory();
-      if (e.key === "ArrowRight") nextStory();
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [currentIndex]);
+    setLikesCount(currentStory.likes?.length || 0);
+    const alreadyLiked = currentStory.likes?.some(
+      (id) => id === currentUserId || id === currentUserId?._id
+    );
+    setLiked(alreadyLiked);
 
-  // Auto-advance for image/text, or video duration
-  useEffect(() => {
-    if (!currentStory || isPaused) return;
+    // Fetch viewers (excluding owner)
+    viewStory(currentStory._id)
+      .then((data) => {
+        if (data.viewers) {
+          const filtered = data.viewers.filter(
+            (v) => v._id !== currentStory.user._id
+          );
+          setViewers(filtered);
+        }
+      })
+      .catch(console.error);
 
-    let duration = STORY_DEFAULT_DURATION;
-    if (currentStory.media_type === "video") {
-      const video = document.getElementById("story-video");
-      if (video) {
-        duration = video.duration * 1000;
-        video.play();
+    // Progress bar
+    setProgress(0);
+    clearInterval(intervalRef.current);
+    let elapsed = 0;
+    const duration = 4000;
+    const step = 50;
+
+    intervalRef.current = setInterval(() => {
+      elapsed += step;
+      setProgress(Math.min((elapsed / duration) * 100, 100));
+      if (elapsed >= duration) {
+        clearInterval(intervalRef.current);
+        if (currentIndex < stories.length - 1) {
+          setCurrentIndex((i) => i + 1);
+        } else {
+          onClose();
+        }
       }
+    }, step);
+
+    return () => clearInterval(intervalRef.current);
+  }, [currentStory]);
+
+  // Auto-fit text for text stories
+  useEffect(() => {
+    if (!textRef.current) return;
+    const container = textRef.current.parentElement;
+    let size = 32;
+    textRef.current.style.fontSize = `${size}px`;
+    const maxHeight = container.clientHeight - 32;
+
+    while (textRef.current.scrollHeight > maxHeight && size > 12) {
+      size -= 1;
+      textRef.current.style.fontSize = `${size}px`;
     }
-
-    if (currentStory.media_type !== "video") {
-      timerRef.current = setTimeout(nextStory, duration);
-    }
-
-    return () => clearTimeout(timerRef.current);
-  }, [currentIndex, currentStory, isPaused]);
-
-  const nextStory = () => {
-    if (currentIndex < stories.length - 1) setCurrentIndex(currentIndex + 1);
-    else onClose();
-  };
-
-  const prevStory = () => {
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-  };
-
-  // Touch navigation
-  const handleTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
-  const handleTouchMove = (e) => (touchEndX.current = e.touches[0].clientX);
-  const handleTouchEnd = () => {
-    const deltaX = touchStartX.current - touchEndX.current;
-    if (Math.abs(deltaX) > 50) deltaX > 0 ? nextStory() : prevStory();
-  };
+    setFontSize(size);
+  }, [currentIndex, stories]);
 
   if (!currentStory) return null;
 
+  const handleClick = (e) => {
+    const { clientX, currentTarget } = e;
+    const { offsetWidth } = currentTarget;
+
+    if (clientX < offsetWidth / 2) {
+      if (currentIndex > 0) setCurrentIndex((i) => i - 1);
+    } else {
+      if (currentIndex < stories.length - 1) setCurrentIndex((i) => i + 1);
+      else onClose();
+    }
+  };
+
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    if (!currentStory) return;
+
+    const originalLiked = liked;
+    const originalLikesCount = likesCount;
+
+    const newLiked = !originalLiked;
+    setLiked(newLiked);
+    setLikesCount(newLiked ? likesCount + 1 : likesCount - 1);
+
+    setAnimateLike(true);
+    setTimeout(() => setAnimateLike(false), 400);
+
+    if (onUpdateStoryLikes) {
+      onUpdateStoryLikes(
+        currentStory._id,
+        newLiked ? likesCount + 1 : likesCount - 1,
+        newLiked
+      );
+    }
+
+    try {
+      const data = await toggleLikeStory(currentStory._id);
+      const serverLikesCount = Array.isArray(data.likes)
+        ? data.likes.length
+        : data.likes || 0;
+
+      const serverLiked = Array.isArray(data.likes)
+        ? data.likes.some(
+            (id) => id === currentUserId || id === currentUserId?._id
+          )
+        : newLiked;
+
+      setLikesCount(serverLikesCount);
+      setLiked(serverLiked);
+
+      if (onUpdateStoryLikes) {
+        onUpdateStoryLikes(currentStory._id, serverLikesCount, serverLiked);
+      }
+    } catch (err) {
+      console.error("Failed to like story", err);
+      setLiked(originalLiked);
+      setLikesCount(originalLikesCount);
+      if (onUpdateStoryLikes) {
+        onUpdateStoryLikes(currentStory._id, originalLikesCount, originalLiked);
+      }
+    }
+  };
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!currentStory) return;
+    if (!window.confirm("Are you sure you want to delete this story?")) return;
+
+    try {
+      const data = await deleteStory(currentStory._id);
+      if (data.success) {
+        toast.success("Story Deleted successfully");
+
+        onDeleteStory?.(currentStory._id);
+        // Close the modal
+        onClose();
+      }
+    } catch (err) {
+      console.error("Failed to delete story", err);
+    }
+  };
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-95 select-none"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={() => setIsPaused(true)}
-      onMouseUp={() => setIsPaused(false)}
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90 z-50"
+      onClick={handleClick}
     >
-      {/* Close Button */}
-      <button
-        className="absolute top-5 right-5 text-white z-50 hover:text-gray-300 transition"
-        onClick={onClose}
-      >
-        <X size={28} />
-      </button>
+      <div className="relative w-full max-w-md h-full flex flex-col justify-center ">
+        <div className="absolute top-3 right-2 flex gap-2 z-20">
+          {isOwner && (
+            <button
+              className="p-1 bg-red-600 bg-opacity-80 rounded-full text-white text-lg hover:bg-red-700 transition-colors"
+              onClick={handleDelete}
+            >
+              🗑
+            </button>
+          )}
 
-      {/* Header: User Avatar & Name */}
-      <div className="absolute top-5 left-5 flex items-center gap-3 z-50">
-        {currentStory.user?.avatar && (
-          <img
-            src={currentStory.user.avatar}
-            alt={currentStory.user.name}
-            className="w-10 h-10 rounded-full object-cover border-2 border-white"
-          />
-        )}
-        <span className="text-white font-semibold text-lg">
-          {currentStory.user?.name || "User"}
-        </span>
-      </div>
-
-      {/* Progress Bars */}
-      <div className="absolute top-16 left-4 right-4 flex gap-1 z-50">
-        {stories.map((_, idx) => (
-          <div key={idx} className="h-1 flex-1 bg-white bg-opacity-30 rounded overflow-hidden">
-            <div
-              className={`h-1 bg-white rounded`}
-              style={{
-                width:
-                  idx < currentIndex
-                    ? "100%"
-                    : idx === currentIndex
-                    ? isPaused
-                      ? "paused"
-                      : "100%"
-                    : "0%",
-                transition:
-                  idx === currentIndex
-                    ? `width ${STORY_DEFAULT_DURATION}ms linear`
-                    : "width 0.3s linear",
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Story Content */}
-      <div className="w-full max-w-md h-full flex items-center justify-center relative">
-        {currentStory.media_type === "image" && (
-          <img
-            src={currentStory.media_url}
-            alt="story"
-            className="object-contain w-full h-full rounded-lg shadow-lg"
-            draggable={false}
-          />
-        )}
-        {currentStory.media_type === "video" && (
-          <video
-            id="story-video"
-            src={currentStory.media_url}
-            className="object-contain w-full h-full rounded-lg shadow-lg"
-            autoPlay
-            controls
-            onEnded={nextStory}
-            draggable={false}
-          />
-        )}
-        {currentStory.media_type === "text" && (
-          <div
-            className="flex items-center justify-center text-white text-3xl font-bold text-center p-6 w-full h-full rounded-lg shadow-inner"
-            style={{ backgroundColor: currentStory.background_color || "#111" }}
+          {/* Close button */}
+          <button
+            className="p-1 bg-gray-800 bg-opacity-50 rounded-full text-white text-lg hover:bg-gray-700 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
           >
-            {currentStory.content}
+            &times;
+          </button>
+        </div>
+        {/* Progress bar */}
+        <div className="absolute top-13 left-0 right-0 flex gap-1 p-2 z-20">
+          {stories.map((_, idx) => (
+            <div
+              key={idx}
+              className="flex-1 h-1 bg-gray-600 rounded overflow-hidden"
+            >
+              <div
+                className="h-full bg-white transition-all duration-100 ease-linear"
+                style={{
+                  width:
+                    idx < currentIndex
+                      ? "100%"
+                      : idx === currentIndex
+                      ? `${progress}%`
+                      : "0%",
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        {/* Close & Delete buttons */}
+
+        {/* Header */}
+        <div className="mb-3 flex items-center gap-2 w-full px-4 z-20 relative my-20">
+          {currentStory.user?.profile_picture ? (
+            <img
+              src={currentStory.user?.profile_picture}
+              alt={currentStory.user?.name}
+              className="w-8 h-8 rounded-full"
+            />
+          ) : (
+            <User className="w-8 h-8 rounded-full text-gray-400" />
+          )}
+          <span className="text-white font-medium">
+            {currentStory.user?.name || "Unknown"}
+          </span>
+          <span className="text-gray-300 text-xs ml-auto">
+            {currentStory.createdAt
+              ? timeAgo(new Date(currentStory.createdAt))
+              : ""}
+          </span>
+        </div>
+
+        {/* Story content */}
+        <div
+          className="w-full flex-1 flex items-center justify-center rounded-lg px-4 relative z-10"
+          style={{
+            backgroundColor:
+              currentStory.story_type === "text"
+                ? currentStory.bg_color || "#333"
+                : undefined,
+          }}
+        >
+          {currentStory.story_type === "image" &&
+          currentStory.image_urls &&
+          currentStory.image_urls[0]?.url ? (
+            <img
+              src={currentStory.image_urls[0].url}
+              alt="story"
+              className="max-h-[80vh] w-auto rounded-lg object-contain"
+            />
+          ) : (
+            <p
+              ref={textRef}
+              className="text-white font-semibold text-center whitespace-pre-wrap break-words"
+              style={{ fontSize: `${fontSize}px`, wordBreak: "break-word" }}
+            >
+              {currentStory.content}
+            </p>
+          )}
+        </div>
+
+        {/* Bottom actions */}
+        <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2 z-20">
+          {/* Like button — only for non-owners */}
+          {!isOwner && (
+            <button
+              className={`p-3 bg-white rounded-full shadow-lg transition-transform flex items-center justify-center ${
+                animateLike ? "scale-125" : "scale-100"
+              }`}
+              style={{ transition: "transform 0.3s ease" }}
+              onClick={handleLike}
+            >
+              <Heart
+                size={24}
+                className={liked ? "text-red-500" : "text-gray-500"}
+                fill={liked ? "currentColor" : "none"}
+              />
+            </button>
+          )}
+
+          {/* Viewer count button — only owner */}
+          {isOwner && (
+            <button
+              className="flex items-center gap-1 text-white text-sm bg-gray-800 bg-opacity-50 px-2 py-1 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowViewerList((prev) => !prev);
+              }}
+            >
+              <Eye size={16} /> {viewers.length}
+            </button>
+          )}
+        </div>
+
+        {/* Viewer list dropdown — only owner */}
+        {isOwner && showViewerList && (
+          <div
+            className="absolute bottom-20 right-6 w-48 max-h-80 overflow-y-auto bg-black bg-opacity-90 text-white rounded-lg shadow-lg p-2 z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-2">
+              {viewers.length === 0 && (
+                <span className="text-sm text-gray-400">No views yet</span>
+              )}
+              {viewers.map((user) => {
+                const userLiked = currentStory.likes?.some(
+                  (id) => id === user._id || id === user._id?._id
+                );
+                return (
+                  <div
+                    key={user._id}
+                    className="relative flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      {user.profile_picture ? (
+                        <img
+                          src={user.profile_picture}
+                          alt={user.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-10 h-10 rounded-full text-gray-400" />
+                      )}
+                      <span className="text-sm truncate">{user.name}</span>
+                    </div>
+                    {userLiked && <Heart size={16} className="text-red-500" />}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Click Areas */}
-      <div
-        className="absolute inset-0 flex justify-between items-center px-4 cursor-pointer z-40"
-        onClick={(e) =>
-          e.clientX < window.innerWidth / 2 ? prevStory() : nextStory()
-        }
-      />
     </div>
   );
 };

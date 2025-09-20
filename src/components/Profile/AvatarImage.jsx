@@ -119,14 +119,7 @@ const AvatarImage = ({ previewProfile, setPreviewProfile }) => {
   };
 
   // Determine which avatar to show
-  let avatarSrc = null;
-  if (previewProfile) {
-    avatarSrc = previewProfile;
-  } else if (userData?.profile_picture) {
-    avatarSrc = userData.profile_picture; // Uploaded avatar
-  } else if (userData?.avatar && userData.avatar !== "") {
-    avatarSrc = userData.avatar; // Google avatar
-  }
+  const avatarSrc = previewProfile || userData?.profile_picture || null;
 
   // Only allow delete if uploaded avatar exists
   const canDelete = !!userData?.profile_picture;

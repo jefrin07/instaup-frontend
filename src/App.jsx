@@ -16,6 +16,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import OtherUserProfile from "./pages/OtherUserProfile";
+import EditPostPage from "./pages/EditPostPage";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/create-post" element={<CreatePost />} />
             <Route path="/view-profile/:id" element={<OtherUserProfile />} />
+            <Route path="/post/:postId/edit" element={<EditPostPage />} />
           </Route>
         </Route>
 

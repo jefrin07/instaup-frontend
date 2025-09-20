@@ -56,7 +56,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="w-full border-t border-gray-200 p-4 px-7 flex items-center justify-between">
           <div className="flex gap-2 items-center cursor-pointer">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              {userData?.profile_picture || userData?.avatar ? (
+              {userData?.profile_picture ? (
                 <img
                   src={userData.profile_picture || userData.avatar}
                   alt={userData.name || "User Avatar"}

@@ -10,7 +10,7 @@ import {
 import { toast } from "react-toastify";
 import { toggleAccountType } from "../../services/userProfile";
 
-const ProfileInfo = ({ userData, onEdit }) => {
+const ProfileInfo = ({ userData, onEdit, posts }) => {
   const [accountType, setAccountType] = useState(userData?.isPrivate);
   const [updating, setUpdating] = useState(false);
 
@@ -105,7 +105,7 @@ const ProfileInfo = ({ userData, onEdit }) => {
         </div>
 
         <div className="flex gap-6 mt-4 font-medium text-slate-800">
-          <span>{userData?.posts || 0} Posts</span>
+          <span>{posts || 0} Posts</span>
           <span>{userData?.followers?.length || 0} Followers</span>
           <span>{userData?.following?.length || 0} Following</span>
         </div>
