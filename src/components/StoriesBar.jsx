@@ -5,6 +5,7 @@ import StoryViewerModal from "./StoryViewerModal";
 import StoryItem from "./StoryItem";
 import { addstory, getStories } from "../services/storyService";
 import { toast } from "react-toastify";
+import AddStory from "./AddStory";
 
 const StoriesBar = () => {
   const scrollRef = useRef(null);
@@ -121,7 +122,7 @@ const StoriesBar = () => {
         onTouchEnd={stopDrag}
       >
         {/* Add Story always first */}
-        <StoryItem
+        <AddStory
           story={{ avatar: userData?.profile_picture, user: { name: "You" } }}
           onClick={() => setIsAddStoryOpen(true)}
         />

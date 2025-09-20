@@ -5,7 +5,6 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import CoverImage from "../components/Profile/CoverImage";
 import AvatarImage from "../components/Profile/AvatarImage";
 import ProfileInfo from "../components/Profile/ProfileInfo";
-import Tabs from "../components/Profile/Tabs";
 import EditProfileModal from "../components/Profile/EditProfileModal";
 import UserPosts from "../components/Profile/UserPosts";
 
@@ -18,7 +17,6 @@ const Profile = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState("Posts");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -66,12 +64,12 @@ const Profile = () => {
     fetchUser();
   }, []);
 
-  // 🔹 Fetch posts when tab or user changes
+  // 🔹 Fetch posts when userData changes
   useEffect(() => {
-    if (activeTab === "Posts" && userData) {
+    if (userData) {
       fetchPosts(1, true);
     }
-  }, [activeTab, userData]);
+  }, [userData]);
 
   const fetchPosts = async (pageNumber = 1, reset = false) => {
     try {
@@ -181,69 +179,57 @@ const Profile = () => {
           />
         </div>
 
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-
         <div className="mt-6 relative">
-          {activeTab === "Posts" && (
-            <div
-              className="grid grid-cols-1 gap-4 no-scrollbar"
-              style={{ height: "60vh", overflowY: "auto" }}
-              id="scrollableUserPosts"
-            >
-              {/* Initial loading */}
-              {postsLoading && posts.length === 0 ? (
-                <div className="flex justify-center items-center py-10 col-span-1">
-                  <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : posts.length === 0 ? (
-                <p className="text-slate-500 text-center col-span-3">
-                  No posts yet
-                </p>
-              ) : (
-                <InfiniteScroll
-                  dataLength={posts.length}
-                  next={() => fetchPosts(page + 1)}
-                  hasMore={hasMore}
-                  scrollableTarget="scrollableUserPosts"
-                  pullDownToRefresh
-                  pullDownToRefreshThreshold={80}
-                  refreshFunction={refreshPosts}
-                  pullDownToRefreshContent={
-                    <p className="text-center text-slate-500 py-2">
-                      ↓ Pull to refresh
-                    </p>
-                  }
-                  releaseToRefreshContent={
-                    <p className="text-center text-slate-500 py-2">
-                      ↑ Release to refresh
-                    </p>
-                  }
-                >
-                  {posts.map((post) => (
-                    <UserPosts
-                      key={post._id}
-                      posts={[post]}
-                      onDeletePost={handleDeletePost}
-                      onEditPost={handleEditPost}
-                    />
-                  ))}
-                </InfiniteScroll>
-              )}
+          <div
+            className="grid grid-cols-1 gap-4 no-scrollbar"
+            style={{ height: "60vh", overflowY: "auto" }}
+            id="scrollableUserPosts"
+          >
+            {postsLoading && posts.length === 0 ? (
+              <div className="flex justify-center items-center py-10 col-span-1">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : posts.length === 0 ? (
+              <p className="text-slate-500 text-center col-span-3">
+                No posts yet
+              </p>
+            ) : (
+              <InfiniteScroll
+                dataLength={posts.length}
+                next={() => fetchPosts(page + 1)}
+                hasMore={hasMore}
+                scrollableTarget="scrollableUserPosts"
+                pullDownToRefresh
+                pullDownToRefreshThreshold={80}
+                refreshFunction={refreshPosts}
+                pullDownToRefreshContent={
+                  <p className="text-center text-slate-500 py-2">
+                    ↓ Pull to refresh
+                  </p>
+                }
+                releaseToRefreshContent={
+                  <p className="text-center text-slate-500 py-2">
+                    ↑ Release to refresh
+                  </p>
+                }
+              >
+                {posts.map((post) => (
+                  <UserPosts
+                    key={post._id}
+                    posts={[post]}
+                    onDeletePost={handleDeletePost}
+                    onEditPost={handleEditPost}
+                  />
+                ))}
+              </InfiniteScroll>
+            )}
 
-              {/* Instagram-style bottom spinner */}
-              {postsLoading && posts.length > 0 && (
-                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "Stories" && (
-            <div className="p-6 bg-white rounded-xl shadow text-center text-slate-500">
-              Stories will appear here
-            </div>
-          )}
+            {postsLoading && posts.length > 0 && (
+              <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
