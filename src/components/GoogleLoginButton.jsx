@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const GoogleLoginButton = () => {
-  const { setIsLoggedIn, setUserData, isLoggedIn } = useAppContext();
+  const { setIsLoggedIn, setUserData, isLoggedIn, connectSocket } =
+    useAppContext();
   const navigate = useNavigate();
 
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -24,11 +25,17 @@ const GoogleLoginButton = () => {
       setUserData(res.user);
       localStorage.setItem("userData", JSON.stringify(res.user));
       setIsLoggedIn(true);
+      if (res?.user) {
+        connectSocket(res.user);
+      }
+
       toast.success(res.message || "Google login successful!");
       navigate("/feed");
     } catch (err) {
       console.error("Google login error:", err.response || err.message || err);
-      toast.error(err.response?.data?.message || "Google login failed. Please try again.");
+      toast.error(
+        err.response?.data?.message || "Google login failed. Please try again."
+      );
     }
   };
 

@@ -10,7 +10,8 @@ const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const { setIsLoggedIn, setUserData, isLoggedIn } = useAppContext();
+  const { setIsLoggedIn, setUserData, isLoggedIn, connectSocket } =
+    useAppContext();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -39,6 +40,9 @@ const Login = () => {
       setUserData(res?.user || null);
       localStorage.setItem("userData", JSON.stringify(res?.user));
       setIsLoggedIn(true);
+      if (res?.user) {
+        connectSocket(res.user);
+      }
 
       setFormData({ email: "", password: "" });
       toast.success(res?.message || "Logged in successfully!");
