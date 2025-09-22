@@ -12,7 +12,7 @@ import {
 import { useChatContext } from "../context/ChatContext.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useParams } from "react-router-dom";
-import EmojiPicker from "emoji-picker-react"; // NEW
+import EmojiPicker from "emoji-picker-react";
 
 const ChatBox = () => {
   const { selectedUser, messages, sendMessage, fetchChat } = useChatContext();
@@ -20,23 +20,30 @@ const ChatBox = () => {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // NEW
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioURL, setAudioURL] = useState(null);
+  const mediaRecorderRef = useRef(null);
   const scrollRef = useRef(null);
-  const { userId } = useParams();
   const emojiPickerRef = useRef(null);
+  const { userId } = useParams();
 
   const [modalImages, setModalImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Fetch chat when userId changes
   useEffect(() => {
     if (userId) fetchChat(userId);
   }, [userId]);
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
+  // Close emoji picker on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -47,7 +54,6 @@ const ChatBox = () => {
         setShowEmojiPicker(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -67,12 +73,15 @@ const ChatBox = () => {
     : onlineUsers?.[selectedUser._id] || false;
 
   const handleSend = async () => {
-    if (!text && files.length === 0) return;
+    if (!text && files.length === 0 && !audioBlob) return;
     setSending(true);
     try {
-      await sendMessage(selectedUser._id, text, files);
+      // Send text and files normally
+      await sendMessage(selectedUser._id, text, files, audioBlob);
       setText("");
       setFiles([]);
+      setAudioBlob(null);
+      setAudioURL(null);
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
@@ -82,18 +91,55 @@ const ChatBox = () => {
 
   const removeFile = (index) =>
     setFiles((prev) => prev.filter((_, i) => i !== index));
+
   const openImageModal = (images, index) => {
     setModalImages(images);
     setCurrentIndex(index);
   };
+
   const prevImage = () =>
     setCurrentIndex((prev) => (prev === 0 ? modalImages.length - 1 : prev - 1));
+
   const nextImage = () =>
     setCurrentIndex((prev) => (prev === modalImages.length - 1 ? 0 : prev + 1));
 
-  // NEW: handle emoji select
+  // Emoji selection
   const addEmoji = (emojiData) => {
     setText((prev) => prev + emojiData.emoji);
+  };
+
+  // Start recording audio
+  const startRecording = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Audio recording not supported in this browser.");
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const url = URL.createObjectURL(blob);
+      setAudioBlob(blob);
+      setAudioURL(url);
+      setRecording(false);
+    };
+    mediaRecorder.start();
+    mediaRecorderRef.current = mediaRecorder;
+    setRecording(true);
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
+  };
+
+  // Delete recorded audio
+  const deleteRecording = () => {
+    setAudioBlob(null);
+    setAudioURL(null);
+    setRecording(false);
   };
 
   return (
@@ -158,6 +204,9 @@ const ChatBox = () => {
                 } shadow relative`}
               >
                 {msg.text && <p>{msg.text}</p>}
+                {msg.audio_url && (
+                  <audio controls src={msg.audio_url} className="w-full mt-2" />
+                )}
                 {msg.image_urls?.length > 0 && (
                   <div
                     className={`mt-2 grid gap-2 ${
@@ -215,6 +264,19 @@ const ChatBox = () => {
         </div>
       )}
 
+      {/* Voice preview */}
+      {audioURL && (
+        <div className="flex items-center space-x-2 p-2 border-t border-gray-200 bg-gray-100">
+          <audio controls src={audioURL} className="flex-1" />
+          <button
+            className="p-2 bg-red-500 text-white rounded-full"
+            onClick={deleteRecording}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <div className="relative flex items-center p-3 border-t border-gray-200 flex-shrink-0">
         <input
@@ -235,6 +297,18 @@ const ChatBox = () => {
           className="p-2"
         >
           <Smile className="w-5 h-5 text-gray-500" />
+        </button>
+
+        {/* Voice button */}
+        <button
+          type="button"
+          onMouseDown={startRecording}
+          onMouseUp={stopRecording}
+          className={`p-2 ml-1 rounded-full ${
+            recording ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+          }`}
+        >
+          🎤
         </button>
 
         {/* Emoji Picker */}
