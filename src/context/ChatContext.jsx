@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import API from "../lib/api";
 import { useAppContext } from "./AppContext.jsx";
 
@@ -14,14 +21,15 @@ export const ChatProvider = ({ children }) => {
   const selectedUserRef = useRef(selectedUser);
 
   // Keep ref updated
-  useEffect(() => { selectedUserRef.current = selectedUser; }, [selectedUser]);
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   // Fetch following users
   const fetchFollowingUsers = useCallback(async () => {
     try {
       const res = await API.get("/api/chat/getFollowingUsers");
       setUsers(res.data.chats);
-      console.log("✅ Fetched following users:", res.data.chats);
     } catch (error) {
       console.error("❌ Error fetching users:", error);
     }
@@ -31,7 +39,10 @@ export const ChatProvider = ({ children }) => {
   const fetchChat = async (userId) => {
     try {
       const res = await API.get(`/api/chat/getChat/${userId}`);
-      const chatMessages = res.data.messages.map((msg) => ({ ...msg, seen: true }));
+      const chatMessages = res.data.messages.map((msg) => ({
+        ...msg,
+        seen: true,
+      }));
       setMessages(chatMessages);
       setSelectedUser(res.data.chatWith);
 
@@ -48,8 +59,6 @@ export const ChatProvider = ({ children }) => {
           !msg.seen ? API.put(`/api/chat/mark/${msg._id}`) : null
         )
       );
-
-      console.log("✅ Fetched chat and marked all as seen:", chatMessages);
     } catch (error) {
       console.error("❌ Error fetching chat:", error);
     }
@@ -67,7 +76,6 @@ export const ChatProvider = ({ children }) => {
       });
 
       setMessages((prev) => [...prev, res.data.message]);
-      console.log("📤 Sent message:", res.data.message);
       return res.data.message;
     } catch (error) {
       console.error("❌ Error sending message:", error);
@@ -79,7 +87,6 @@ export const ChatProvider = ({ children }) => {
     if (!socket) return;
 
     const handleNewMessage = (newMessage) => {
-      console.log("📥 New message received:", newMessage);
       const senderIdStr = newMessage.senderId?.toString();
       if (!senderIdStr) return;
 
@@ -96,13 +103,11 @@ export const ChatProvider = ({ children }) => {
             .concat(seenMessage)
         );
         API.put(`/api/chat/mark/${newMessage._id}`).catch(console.error);
-        console.log("💚 Marked new message as seen:", newMessage);
       } else {
         setUnseenMessages((prev) => ({
           ...prev,
           [senderIdStr]: prev[senderIdStr] ? prev[senderIdStr] + 1 : 1,
         }));
-        console.log("💔 Incremented unseen count for:", senderIdStr);
       }
 
       // Update sender preview
@@ -130,11 +135,9 @@ export const ChatProvider = ({ children }) => {
     };
 
     socket.on("New Message", handleNewMessage);
-    console.log("🔔 Socket listener attached for 'New Message'");
 
     return () => {
       socket.off("New Message", handleNewMessage);
-      console.log("❌ Socket listener removed for 'New Message'");
     };
   }, [socket, userData?._id]);
 

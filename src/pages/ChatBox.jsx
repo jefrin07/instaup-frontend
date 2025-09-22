@@ -7,10 +7,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Smile,
 } from "lucide-react";
 import { useChatContext } from "../context/ChatContext.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useParams } from "react-router-dom";
+import EmojiPicker from "emoji-picker-react"; // NEW
 
 const ChatBox = () => {
   const { selectedUser, messages, sendMessage, fetchChat } = useChatContext();
@@ -18,8 +20,10 @@ const ChatBox = () => {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // NEW
   const scrollRef = useRef(null);
   const { userId } = useParams();
+  const emojiPickerRef = useRef(null);
 
   const [modalImages, setModalImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -32,6 +36,23 @@ const ChatBox = () => {
     if (scrollRef.current)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   if (!selectedUser) {
     return (
@@ -69,6 +90,11 @@ const ChatBox = () => {
     setCurrentIndex((prev) => (prev === 0 ? modalImages.length - 1 : prev - 1));
   const nextImage = () =>
     setCurrentIndex((prev) => (prev === modalImages.length - 1 ? 0 : prev + 1));
+
+  // NEW: handle emoji select
+  const addEmoji = (emojiData) => {
+    setText((prev) => prev + emojiData.emoji);
+  };
 
   return (
     <div className="flex flex-col flex-1 border-l border-gray-200 bg-white h-full">
@@ -162,11 +188,6 @@ const ChatBox = () => {
                     ))}
                   </div>
                 )}
-                {isMe && (
-                  <p className="text-xs text-gray-300 text-right mt-1">
-                    {msg.seen ? "✓✓ Seen" : "✓ Sent"}
-                  </p>
-                )}
               </div>
             </div>
           );
@@ -195,7 +216,7 @@ const ChatBox = () => {
       )}
 
       {/* Input */}
-      <div className="flex items-center p-3 border-t border-gray-200 flex-shrink-0">
+      <div className="relative flex items-center p-3 border-t border-gray-200 flex-shrink-0">
         <input
           type="file"
           multiple
@@ -206,6 +227,22 @@ const ChatBox = () => {
         <label htmlFor="file-upload" className="p-2 cursor-pointer">
           <Paperclip className="w-5 h-5 text-gray-500" />
         </label>
+
+        {/* Emoji button */}
+        <button
+          type="button"
+          onClick={() => setShowEmojiPicker((prev) => !prev)}
+          className="p-2"
+        >
+          <Smile className="w-5 h-5 text-gray-500" />
+        </button>
+
+        {/* Emoji Picker */}
+        {showEmojiPicker && (
+          <div ref={emojiPickerRef} className="absolute bottom-14 left-10 z-50">
+            <EmojiPicker onEmojiClick={addEmoji} />
+          </div>
+        )}
 
         <input
           type="text"
